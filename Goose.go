@@ -1,34 +1,15 @@
 package goose
 
-import (
-	"net/http"
-)
-
 /**
+ * Sahil Gulati {sahil.gulati1991@outlook.com}
  * Global settings for an HTTP service.
  */
 type Goose struct {
 	gooseRoutes   map[string]GooseRoute
 	listenAddress string
 	contextRoute  *GooseRoute
-	http          *GooseHTTP
-	holder 		interface{}
+	holder        interface{}
 }
-/**
- * Goose route will hold all route related details.
- */
-type GooseRoute struct {
-	methods     []string
-	uRL         string
-	contentType string
-	cors        map[string]string
-	haveCors    bool
-	middlewares []GooseMiddleware
-	endpoint    GooseEndpoint
-	message		GooseMessage
-}
-
-type GooseEndpoint func(*http.Request, *map[string]interface{}) (interface{}, error)
 
 func (g Goose) GetInstance() *Goose {
 	goose := new(Goose)
@@ -44,9 +25,7 @@ func (g *Goose) Route(methods []string, routePath string) *Goose {
 		methods:  methods,
 		uRL:      routePath,
 		haveCors: false,
-		message:  GooseMessage {
-			holder: g.holder,
-		},
+		holder:   g.holder,
 	}
 	g.contextRoute = &gooseRoute
 	g.gooseRoutes[routePath] = gooseRoute
