@@ -13,9 +13,9 @@ import (
 )
 
 func main() {
-    goose := goose.Goose{}.GetInstance()
-    goose.Route([]string{goose.GET}, "/health").Endpoint(endpoint).Register()
-    goose.Serve(":8080")
+    Goose := goose.Goose{}.GetInstance()
+    Goose.Route([]string{goose.GET}, "/health").Endpoint(endpoint).Register()
+    Goose.Serve(":8080")
 }
 var endpoint goose.GooseEndpoint = func(request *http.Request, gooseMessage *goose.GooseMessage) (interface{}, error) {
     fmt.Println("Executing actions --->")
