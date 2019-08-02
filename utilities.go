@@ -27,3 +27,11 @@ func Isset(data interface{}, key interface{}) bool {
 	}
 	return isset
 }
+func contains(strings []string, piece string) bool {
+	for _, str := range strings {
+		if str == piece {
+			return true
+		}
+	}
+	return false
+}

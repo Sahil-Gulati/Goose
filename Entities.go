@@ -40,6 +40,9 @@ const (
 	CONTENT_TYPE     = "Content-Type"
 	APPLICATION_XML  = "application/xml"
 	APPLICATION_JSON = "application/json"
+	PLAIN_TEXT       = "text/plain"
 	USER_AGENT       = "User-Agent"
 	AGENT            = "golang Goose1.1"
+
+	METHOD_NOT_ALLOWED = "Method Not Allowed."
 )

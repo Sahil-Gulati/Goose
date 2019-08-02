@@ -56,8 +56,9 @@ func (gr *GooseResponder) writeHeaders() *GooseResponder {
 func (gr *GooseResponder) prepareStatusCode(statusCode interface{}) *GooseResponder {
 	if value, isAsserted := statusCode.(int); isAsserted {
 		gr.statusCode = value
+	} else {
+		gr.statusCode = 200
 	}
-	gr.statusCode = 200
 	return gr
 }
 func (gr *GooseResponder) writeStatusCode() *GooseResponder {
@@ -75,6 +76,7 @@ func (gr *GooseResponder) emitResponse(response interface{}) error {
 		encoder.Indent(" ", " ")
 		return encoder.Encode(response.(string))
 	default:
+		gr.writer.Write([]byte(response.(string)))
 		return nil
 	}
 }

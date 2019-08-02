@@ -25,7 +25,6 @@ func (gHTTP GooseHTTP) GetInstance(routes map[string]GooseRoute) *GooseHTTP {
  */
 func (gHTTP *GooseHTTP) Register() *GooseHTTP {
 	for routeURL, gooseRoute := range gHTTP.routes {
-		fmt.Println(routeURL, gooseRoute)
 		http.HandleFunc(
 			routeURL,
 			GooseHTTPHandler{
@@ -51,11 +50,30 @@ type GooseHTTPHandler struct {
  * @3 Preparing and emitting final response.
  */
 func (gHTTPHandler GooseHTTPHandler) Pipeline(w http.ResponseWriter, req *http.Request) {
-	proceed, middlewareMessage := GooseMiddlewareExecutor{}.GetInstance(gHTTPHandler.route).Execute(req)
-	if proceed {
-		response, err := gHTTPHandler.route.endpoint(req, middlewareMessage.(*GooseMessage))
-		if err == nil {
-			GooseResponder{}.GetInstance(w).Respond(response)
+	if gHTTPHandler.isValid(req) {
+		proceed, middlewareMessage := GooseMiddlewareExecutor{}.GetInstance(gHTTPHandler.route).Execute(req)
+		if proceed {
+			response, err := gHTTPHandler.route.endpoint(req, middlewareMessage.(*GooseMessage))
+			if err == nil {
+				GooseResponder{}.GetInstance(w).Respond(response)
+			}
 		}
+	} else {
+		GooseResponder{}.GetInstance(w).Respond(gHTTPHandler.buildCustomMessage())
+	}
+}
+func (gHTTPHandler GooseHTTPHandler) isValid(req *http.Request) bool {
+	if contains(gHTTPHandler.route.methods, req.Method) {
+		return true
+	}
+	return false
+}
+func (gHTTPHandler GooseHTTPHandler) buildCustomMessage() interface{} {
+	return map[string]interface{}{
+		HEADERS: map[string]string{
+			CONTENT_TYPE: PLAIN_TEXT,
+		},
+		RESPONSE:    METHOD_NOT_ALLOWED,
+		STATUS_CODE: 405,
 	}
 }
