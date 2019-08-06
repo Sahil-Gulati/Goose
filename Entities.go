@@ -11,17 +11,22 @@ type GooseEndpoint func(*http.Request, *GooseMessage) (interface{}, error)
 type GooseRoute struct {
 	methods     []string
 	uRL         string
+	uRLRegex    string
 	contentType string
 	cors        map[string]string
 	haveCors    bool
 	middlewares []GooseMiddleware
 	endpoint    GooseEndpoint
 	holder      interface{}
+	hasDynamics bool
+	dynamics    []string
+	urlParams   map[string]string
 }
 
 type GooseMessage struct {
 	RequestId   int64
 	RequestTime int64
+	GetParams   map[string]string
 	Holder      interface{}
 }
 
@@ -35,6 +40,7 @@ const (
 
 	GET              = "GET"
 	POST             = "POST"
+	PATCH            = "PATCH"
 	OPTIONS          = "OPTIONS"
 	DELETE           = "DELETE"
 	CONTENT_TYPE     = "Content-Type"

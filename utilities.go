@@ -1,5 +1,11 @@
 package goose
 
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
 func Isset(data interface{}, key interface{}) bool {
 	var isset bool
 	switch data.(type) {
@@ -34,4 +40,24 @@ func contains(strings []string, piece string) bool {
 		}
 	}
 	return false
+}
+func getDynamics(url string) []string {
+	dynamics := []string{}
+	regex := regexp.MustCompile(`\{[a-zA-Z_]+\}`)
+	matches := regex.FindAllString(url, -1)
+	for _, match := range matches {
+		regex = regexp.MustCompile(`([a-zA-Z_]+)`)
+		matches = regex.FindAllString(match, -1)
+		dynamics = append(dynamics, matches[0])
+	}
+	return dynamics
+}
+func convertDyanmicURLToRegex(url string) string {
+	regex := regexp.MustCompile(`\{[a-zA-Z_]+\}`)
+	matches := regex.FindAllString(url, -1)
+	for _, match := range matches {
+		url = strings.Replace(url, match, "([a-zA-Z0-9_.]+)", -1)
+	}
+	url = strings.Replace(url, "/", "\\/", -1)
+	return fmt.Sprintf("^%s$", url)
 }

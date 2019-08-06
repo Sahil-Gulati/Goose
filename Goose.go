@@ -26,6 +26,11 @@ func (g *Goose) Route(methods []string, routePath string) *Goose {
 		uRL:      routePath,
 		haveCors: false,
 		holder:   g.holder,
+		dynamics: getDynamics(routePath),
+	}
+	if len(gooseRoute.dynamics) > 0 {
+		gooseRoute.hasDynamics = true
+		gooseRoute.uRLRegex = convertDyanmicURLToRegex(gooseRoute.uRL)
 	}
 	g.contextRoute = &gooseRoute
 	g.gooseRoutes[routePath] = gooseRoute

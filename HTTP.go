@@ -3,6 +3,7 @@ package goose
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 )
 
 /**
@@ -32,6 +33,21 @@ func (gHTTP *GooseHTTP) Register() *GooseHTTP {
 			}.Pipeline,
 		)
 	}
+	gHTTP.DefaultRoute()
+	return gHTTP
+}
+func (gHTTP *GooseHTTP) DefaultRoute() *GooseHTTP {
+	route := "/"
+	http.HandleFunc(
+		route,
+		GooseHTTPHandler{
+			route: GooseRoute{
+				methods: []string{GET, POST, OPTIONS, PATCH, DELETE},
+				uRL:     route,
+			},
+			routes: gHTTP.routes,
+		}.RegexPipeline,
+	)
 	return gHTTP
 }
 func (gHTTP *GooseHTTP) Listen(address string) {
@@ -40,7 +56,8 @@ func (gHTTP *GooseHTTP) Listen(address string) {
 }
 
 type GooseHTTPHandler struct {
-	route GooseRoute
+	routes map[string]GooseRoute
+	route  GooseRoute
 }
 
 /**
@@ -50,7 +67,8 @@ type GooseHTTPHandler struct {
  * @3 Preparing and emitting final response.
  */
 func (gHTTPHandler GooseHTTPHandler) Pipeline(w http.ResponseWriter, req *http.Request) {
-	if gHTTPHandler.isValid(req) {
+	validator := GooseValidator{}.GetInstance(gHTTPHandler.route, req)
+	if validator.validate() {
 		proceed, middlewareMessage := GooseMiddlewareExecutor{}.GetInstance(gHTTPHandler.route).Execute(req)
 		if proceed {
 			response, err := gHTTPHandler.route.endpoint(req, middlewareMessage.(*GooseMessage))
@@ -62,12 +80,12 @@ func (gHTTPHandler GooseHTTPHandler) Pipeline(w http.ResponseWriter, req *http.R
 		GooseResponder{}.GetInstance(w).Respond(gHTTPHandler.buildCustomMessage())
 	}
 }
-func (gHTTPHandler GooseHTTPHandler) isValid(req *http.Request) bool {
-	if contains(gHTTPHandler.route.methods, req.Method) {
-		return true
-	}
-	return false
+func (gHTTPHandler GooseHTTPHandler) RegexPipeline(w http.ResponseWriter, req *http.Request) {
+	found, gooseRoute := gHTTPHandler.getRouteForRegexURI(req.URL.Path)
+	validator := GooseValidator{}.GetInstance(gooseRoute, req)
+	fmt.Println(validator, found)
 }
+
 func (gHTTPHandler GooseHTTPHandler) buildCustomMessage() interface{} {
 	return map[string]interface{}{
 		HEADERS: map[string]string{
@@ -76,4 +94,21 @@ func (gHTTPHandler GooseHTTPHandler) buildCustomMessage() interface{} {
 		RESPONSE:    METHOD_NOT_ALLOWED,
 		STATUS_CODE: 405,
 	}
+}
+func (gHTTPHandler GooseHTTPHandler) getRouteForRegexURI(url string) (bool, GooseRoute) {
+	for _, route := range gHTTPHandler.routes {
+		regex := regexp.MustCompile(route.uRLRegex)
+		substrings := regex.FindAllStringSubmatch(url, 1)
+		urlParams := map[string]string{}
+		if len(substrings) >= 1 && len(substrings[0]) > 1 {
+			for i := 1; i < len(substrings[0]); i++ {
+				key := route.dynamics[i-1]
+				value := substrings[0][i]
+				urlParams[key] = value
+			}
+			route.urlParams = urlParams
+			return true, route
+		}
+	}
+	return false, GooseRoute{}
 }
