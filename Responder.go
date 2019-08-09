@@ -11,72 +11,60 @@ import (
 )
 
 type GooseResponder struct {
-	writer     http.ResponseWriter
-	headers    map[string]string
-	statusCode int
+	writer   http.ResponseWriter
+	route    *GooseRoute
+	response *GooseResponse
 }
 
-func (gr GooseResponder) GetInstance(writer http.ResponseWriter) *GooseResponder {
+func (gr GooseResponder) GetInstance() *GooseResponder {
 	gooseResponder := new(GooseResponder)
-	gooseResponder.writer = writer
-	gooseResponder.headers = make(map[string]string)
+	gooseResponder.route = gr.route
+	gooseResponder.writer = gr.writer
+	gooseResponder.response = gr.response
 	return gooseResponder
 }
-func (gr *GooseResponder) Respond(response interface{}) error {
-	value, asserted := response.(map[string]interface{})
-	if !asserted {
-		return gr.
-			prepareHeaders(nil).writeHeaders().
-			prepareStatusCode(nil).writeStatusCode().
-			emitResponse(response)
-	}
-	return gr.
-		prepareHeaders(value[HEADERS]).writeHeaders().
-		prepareStatusCode(value[STATUS_CODE]).writeStatusCode().
-		emitResponse(value[RESPONSE])
+func (gr *GooseResponder) Respond() error {
+	gr.writeHeaders(
+		gr.prepareHeaders(),
+	)
+	return gr.writeResponse(
+		gr.prepareResponse(),
+	)
 }
 
-func (gr *GooseResponder) prepareHeaders(contextHeaders interface{}) *GooseResponder {
-	gr.headers = make(map[string]string)
-	gr.headers[USER_AGENT] = AGENT
-	gr.headers[CONTENT_TYPE] = APPLICATION_JSON
-	if value, isAsserted := contextHeaders.(map[string]string); isAsserted {
-		for headerName, headerValue := range value {
-			gr.headers[headerName] = headerValue
-		}
+func (gr *GooseResponder) prepareHeaders() (map[string]string, int) {
+	gr.response.Headers = ifElse(len(gr.response.Headers) == 0, make(map[string]string), gr.response.Headers).(map[string]string)
+	gr.response.StatusCode = ifElse(gr.response.StatusCode == 0, 200, gr.response.StatusCode).(int)
+	gr.response.Headers[CONTENT_TYPE] = ifElse(gr.response.Headers[CONTENT_TYPE] != "", gr.response.Headers[CONTENT_TYPE], PLAIN_TEXT).(string)
+	if gr.route.hasCors {
+		gr.response.Headers["Access-Control-Allow-Origin"] = "*"
+		gr.response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT"
+		gr.response.Headers["Access-Control-Allow-Headers"] = "Content-Type"
 	}
-	return gr
+	return gr.response.Headers, gr.response.StatusCode
 }
-func (gr *GooseResponder) writeHeaders() *GooseResponder {
-	for headerName, headerValue := range gr.headers {
+func (gr *GooseResponder) writeHeaders(headers map[string]string, statusCode int) *GooseResponder {
+	for headerName, headerValue := range headers {
 		gr.writer.Header().Add(headerName, headerValue)
 	}
+	gr.writer.WriteHeader(statusCode)
 	return gr
 }
-func (gr *GooseResponder) prepareStatusCode(statusCode interface{}) *GooseResponder {
-	if value, isAsserted := statusCode.(int); isAsserted {
-		gr.statusCode = value
-	} else {
-		gr.statusCode = 200
-	}
-	return gr
-}
-func (gr *GooseResponder) writeStatusCode() *GooseResponder {
-	gr.writer.WriteHeader(gr.statusCode)
-	return gr
+func (gr *GooseResponder) prepareResponse() *GooseResponse {
+	return gr.response
 }
 
-func (gr *GooseResponder) emitResponse(response interface{}) error {
-	switch gr.headers[CONTENT_TYPE] {
+func (gr *GooseResponder) writeResponse(response *GooseResponse) error {
+	switch response.Headers[CONTENT_TYPE] {
 	case APPLICATION_JSON:
-		return json.NewEncoder(gr.writer).Encode(response)
+		return json.NewEncoder(gr.writer).Encode(response.Response)
 	case APPLICATION_XML:
 		gr.writer.Write([]byte(xml.Header))
 		encoder := xml.NewEncoder(gr.writer)
 		encoder.Indent(" ", " ")
-		return encoder.Encode(response.(string))
+		return encoder.Encode(response.Response)
 	default:
-		gr.writer.Write([]byte(response.(string)))
+		gr.writer.Write([]byte(response.Response.(string)))
 		return nil
 	}
 }

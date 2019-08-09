@@ -2,10 +2,18 @@ package goose
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 )
 
+func ifElse(condition bool, satisfied interface{}, unsatisfied interface{}) interface{} {
+	if condition {
+		return satisfied
+	} else {
+		return unsatisfied
+	}
+}
 func Isset(data interface{}, key interface{}) bool {
 	var isset bool
 	switch data.(type) {
@@ -60,4 +68,18 @@ func convertDyanmicURLToRegex(url string) string {
 	}
 	url = strings.Replace(url, "/", "\\/", -1)
 	return fmt.Sprintf("^%s$", url)
+}
+func getHeaders(request *http.Request) map[string]string {
+	headers := make(map[string]string)
+	for headername, _ := range request.Header {
+		headers[headername] = request.Header.Get(headername)
+	}
+	return headers
+}
+func getParams(request *http.Request) map[string]string {
+	params := make(map[string]string)
+	for field, _ := range request.URL.Query() {
+		params[field] = request.URL.Query().Get(field)
+	}
+	return params
 }

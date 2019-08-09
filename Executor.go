@@ -5,48 +5,62 @@ package goose
  * This file contains functionality of execution of middlewares.
  **/
 import (
-	"fmt"
 	"net/http"
-	"time"
 )
 
 type GooseMiddlewareExecutor struct {
-	route GooseRoute
+	toProcess bool
+	route     *GooseRoute
+	message   *GooseMessage
+	request   *http.Request
+	response  *GooseResponse
 }
 
-func (gME GooseMiddlewareExecutor) GetInstance(gooseRoute GooseRoute) *GooseMiddlewareExecutor {
+func (gME GooseMiddlewareExecutor) GetInstance() *GooseMiddlewareExecutor {
 	gooseMiddlewareExecutor := new(GooseMiddlewareExecutor)
-	gooseMiddlewareExecutor.route = gooseRoute
+	gooseMiddlewareExecutor.route = gME.route
+	gooseMiddlewareExecutor.message = gME.message
+	gooseMiddlewareExecutor.request = gME.request
+	gooseMiddlewareExecutor.response = gME.response
+	gooseMiddlewareExecutor.toProcess = gME.toProcess
 	return gooseMiddlewareExecutor
 }
 
 /**
  * This function will be response for execution of middleware.
  */
-func (gME *GooseMiddlewareExecutor) Execute(req *http.Request) (bool, interface{}) {
-	var err error
-	proceed := true
-	gooseMessage := gME.getMessage()
-	for _, middleware := range gME.route.middlewares {
-		proceed, err = middleware(req, gooseMessage)
-		if !proceed {
-			fmt.Println(err)
+func (gME *GooseMiddlewareExecutor) Execute() bool {
+	if gME.toProcess {
+		for _, middleware := range gME.route.middlewares {
+			proceed, response := middleware(gME.request, gME.message)
+			if !proceed {
+				gME.toProcess = proceed
+				gME.response.Headers = response.Headers
+				gME.response.Response = response.Response
+				gME.response.StatusCode = response.StatusCode
+				return false
+			}
 		}
 	}
-	return proceed, gooseMessage
+	return true
 }
 
 /**
- * This function will create a new gooseMessage it
- *@1 Adding requestId
- *@2 Adding requestTime
- *@3 Previous provided user holder
+ * This function will be responsible for execution of final action.
  */
-func (gME *GooseMiddlewareExecutor) getMessage() *GooseMessage {
-	requestTime := time.Now().UnixNano()
-	return &GooseMessage{
-		RequestId:   requestTime,
-		RequestTime: requestTime,
-		Holder:      gME.route.holder,
+func (gME *GooseMiddlewareExecutor) Action() {
+	if gME.toProcess {
+		response := gME.route.endpoint(gME.request, gME.message)
+		if value, asserted := response.(GooseResponse); asserted {
+			gME.response.Headers = value.Headers
+			gME.response.Response = value.Response
+			gME.response.StatusCode = value.StatusCode
+		} else if value, asserted := response.(*GooseResponse); asserted {
+			gME.response.Headers = value.Headers
+			gME.response.Response = value.Response
+			gME.response.StatusCode = value.StatusCode
+		} else {
+			gME.response.Response = response
+		}
 	}
 }
