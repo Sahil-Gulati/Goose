@@ -1,29 +1,40 @@
 # Goose
 GoLang framework for building REST API. It requires a bare minimum code to start a server by offering fast development of REST based APIs.
 
+### Usage
+`go get -v -u https://github.com/Sahil-Gulati/Goose`
 
-`HelloWorld.go`
+### Sample code
 ```go
-package main
-
-import (
-	"fmt"
-	"net/http"
-	goose "github.com/Sahil-Gulati/Goose"
-)
-
 func main() {
     Goose := goose.Goose{}.GetInstance()
-    
-    Goose.Route([]string{goose.GET}, "/health").Endpoint(endpoint).Register()
-    Goose.RegexRoute([]string{goose.GET}, "/api/v1/transaction/{transactionId}").Endpoint(endpoint).Register()
-    
+    Goose.Route([]string{goose.GET}, "/api/v1/transactions/").Endpoint(endpoint).Register()
     Goose.Serve(":8080")
 }
-var endpoint goose.GooseEndpoint = func(request *http.Request, gooseMessage *goose.GooseMessage) (interface{}, error) {
-    fmt.Println("Executing actions --->" + gooseMessage.UrlParams["transactionId"])
-    return map[string]string{"message": "Hello World!"}, nil
+```
+
+### Middleware
+##### Middleware signature
+```go
+type GooseMiddleware func(*http.Request, *GooseMessage) (bool, *GooseResponse)
+```
+
+### Endpoint
+##### Endpoint signature
+```go
+type GooseEndpoint func(*http.Request, *GooseMessage) interface{}
+```
+
+### Message
+##### Message signature
+```go
+type GooseMessage struct {
+	RequestId      int64
+	RequestTime    int64
+	PostBody       string
+	Holder         interface{}
+	RequestHeaders map[string]string
+	GetParams      map[string]string
+	UrlParams      map[string]string
 }
-
-
 ```
