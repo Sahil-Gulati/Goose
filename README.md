@@ -8,7 +8,7 @@ GoLang framework for building REST API. It requires a bare minimum code to start
 ```go
 func main() {
     Goose := goose.Goose{}.GetInstance()
-    Goose.Route([]string{goose.GET}, "/api/v1/transactions/").Endpoint(endpoint).Register()
+    Goose.Route([]string{goose.GET}, "/api/v1/transactions/").Middlewares(m1, m2).Endpoint(endpoint).Register()
     Goose.Serve(":8080")
 }
 ```
